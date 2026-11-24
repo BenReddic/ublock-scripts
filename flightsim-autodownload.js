@@ -1,55 +1,85 @@
 flightsim-autodownload.js text/javascript
 (function() {
     'use strict';
-    console.log('[FS Auto] Resource injected');
+    if (window.top !== window.self) return;
     if (!/(^|\.)flightsim\.to$/.test(location.hostname)) return;
+    console.log('[FS Auto] Resource injected');
     function init() {
         if (!document.body) return;
         window.fsAutoDownload?.stop();
         const clicked = new WeakSet();
-        const visible = el => el.getClientRects().length > 0 &&
+        let pending = null;
+        const normalize = text =>
+            text.replace(/\s+/g, ' ').trim().toLowerCase();
+        const visible = el =>
+            el.getClientRects().length > 0 &&
             getComputedStyle(el).visibility !== 'hidden' &&
             getComputedStyle(el).display !== 'none';
-        const normalize = text => text.replace(/\s+/g, ' ').trim().toLowerCase();
         function scan() {
-            if (!document.body) return;
-            if (document.body.innerText.includes('Third-Party Application')) return;
-            const buttons = [...document.querySelectorAll('button, [role="button"], a')].filter(visible);
+            pending = null;
+            const buttons = document.querySelectorAll(
+                'button, [role="button"], a'
+            );
             for (const button of buttons) {
-                if (clicked.has(button) || button.disabled || button.getAttribute('aria-disabled') === 'true') continue;
-                const text = normalize(button.innerText || '');
-                const dialog = button.closest('[role="dialog"], [aria-modal="true"], dialog');
-                if (text === 'download now') {
-                    clicked.add(button);
-                    console.log('[FS Auto] Starting download');
-                    button.click();
-                    return;
-                }
-                if (text === 'continue' && dialog && dialog.innerText.includes('Select a file to download')) {
-                    const options = dialog.querySelectorAll('input[type="radio"], [role="radio"]');
+                if (clicked.has(button) ||
+                    button.disabled ||
+                    button.getAttribute('aria-disabled') === 'true') continue;
+                const text = normalize(button.textContent || '');
+                if (text !== 'download now' && text !== 'continue') continue;
+                if (!visible(button)) continue;
+                const dialog = button.closest(
+                    '[role="dialog"], [aria-modal="true"], dialog'
+                );
+                if (text === 'continue') {
+                    if (!dialog ||
+                        !dialog.textContent.includes('Select a file to download')) continue;
+                    const options = dialog.querySelectorAll(
+                        'input[type="radio"], [role="radio"]'
+                    );
                     if (options.length !== 1) continue;
-                    clicked.add(button);
-                    console.log('[FS Auto] Continuing with single file');
-                    button.click();
-                    return;
                 }
+                if (document.body.innerText.includes('Third-Party Application')) return;
+                clicked.add(button);
+                console.log(text === 'download now'
+                    ? '[FS Auto] Starting download'
+                    : '[FS Auto] Continuing with single file');
+                button.click();
+                schedule();
+                return;
             }
         }
-        const observer = new MutationObserver(scan);
+        function schedule() {
+            if (pending !== null) return;
+            pending = setTimeout(scan, 50);
+        }
+        const observer = new MutationObserver(schedule);
         observer.observe(document.body, {
             childList: true,
             subtree: true,
-            attributes: true
+            characterData: true,
+            attributes: true,
+            attributeFilter: [
+                'disabled',
+                'aria-disabled',
+                'aria-hidden',
+                'class',
+                'style',
+                'hidden',
+                'checked',
+                'aria-checked'
+            ]
         });
-        const timer = setInterval(scan, 250);
+        document.addEventListener('click', schedule, true);
         window.fsAutoDownload = {
             stop() {
                 observer.disconnect();
-                clearInterval(timer);
+                clearTimeout(pending);
+                pending = null;
+                document.removeEventListener('click', schedule, true);
             }
         };
-        console.log('[FS Auto] Enabled via uBlock Origin');
-        scan();
+        console.log('[FS Auto] v1.1 Optimized - Enabled via uBlock Origin');
+        schedule();
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init, {once:true});
