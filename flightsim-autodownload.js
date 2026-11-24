@@ -1,4 +1,7 @@
 /// flightsim-autodownload.js
+
+flightsim-autodownload.js text/javascript
+    
 (function() {
     'use strict';
 
