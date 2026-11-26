@@ -3,47 +3,34 @@ modsfire-autodownload.js text/javascript
     'use strict';
     if (window.top !== window.self) return;
     if (!/(^|\.)modsfire\.com$/.test(location.hostname)) return;
-
     function init() {
         if (!document.body) return;
         window.mfAutoDownload?.stop();
-
         const completed = new Set();
         let pending = null;
-
         const normalize = text =>
             text.replace(/\s+/g, ' ').trim().toLowerCase();
-
         function ready(el) {
             if (!el || !el.getClientRects().length) return false;
             if (el.hasAttribute('disabled')) return false;
             if (el.getAttribute('aria-disabled') === 'true') return false;
-
             const style = getComputedStyle(el);
-
             return style.visibility === 'visible' &&
                 style.pointerEvents !== 'none' &&
                 style.cursor !== 'not-allowed';
         }
-
         function scan() {
             pending = null;
-
             const path = location.pathname;
             const finalPage = /^\/download\/[^/]+\/[^/]+\/?$/.test(path);
             const filePage = /^\/[a-zA-Z0-9]+\/?$/.test(path);
-
             if (!finalPage && !filePage) return;
-
             const buttons = document.querySelectorAll('a.download-button');
-
             for (const button of buttons) {
                 if (!ready(button)) continue;
-
                 const text = normalize(button.textContent || '');
                 const href = button.getAttribute('href') || '';
                 let stage;
-
                 if (filePage &&
                     text === 'generate link' &&
                     !href) {
@@ -60,23 +47,18 @@ modsfire-autodownload.js text/javascript
                 } else {
                     continue;
                 }
-
                 if (completed.has(stage)) continue;
-
                 completed.add(stage);
                 console.log('[MF Auto] Clicking ' + stage);
                 button.click();
                 return;
             }
         }
-
         function schedule() {
             if (pending !== null) return;
             pending = setTimeout(scan, 50);
         }
-
         const observer = new MutationObserver(schedule);
-
         observer.observe(document.body, {
             childList: true,
             subtree: true,
@@ -92,7 +74,6 @@ modsfire-autodownload.js text/javascript
                 'aria-disabled'
             ]
         });
-
         window.mfAutoDownload = {
             stop() {
                 observer.disconnect();
@@ -100,11 +81,9 @@ modsfire-autodownload.js text/javascript
                 pending = null;
             }
         };
-
         console.log('[MF Auto] v1.1 Enabled');
         schedule();
     }
-
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init, {once: true});
     } else {
