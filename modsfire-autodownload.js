@@ -3,6 +3,7 @@ modsfire-autodownload.js text/javascript
     'use strict';
     if (window.top !== window.self) return;
     if (!/(^|\.)modsfire\.com$/.test(location.hostname)) return;
+    if (!/^\/[a-zA-Z0-9]+\/?$/.test(location.pathname)) return;
     function init() {
         if (!document.body) return;
         window.mfAutoDownload?.stop();
@@ -21,29 +22,17 @@ modsfire-autodownload.js text/javascript
         }
         function scan() {
             pending = null;
-            const path = location.pathname;
-            const finalPage = /^\/download\/[^/]+\/[^/]+\/?$/.test(path);
-            const filePage = /^\/[a-zA-Z0-9]+\/?$/.test(path);
-            if (!finalPage && !filePage) return;
             const buttons = document.querySelectorAll('a.download-button');
             for (const button of buttons) {
                 if (!ready(button)) continue;
                 const text = normalize(button.textContent || '');
                 const href = button.getAttribute('href') || '';
                 let stage;
-                if (filePage &&
-                    text === 'generate link' &&
-                    !href) {
+                if (text === 'generate link' && !href) {
                     stage = 'Generate Link';
-                } else if (filePage &&
-                    text === 'download link' &&
+                } else if (text === 'download link' &&
                     href.startsWith('/download/')) {
                     stage = 'Download Link';
-                } else if (finalPage &&
-                    text === 'download' &&
-                    button.id === 'downloadnow' &&
-                    href.startsWith('/d/')) {
-                    stage = 'Download';
                 } else {
                     continue;
                 }
@@ -81,7 +70,7 @@ modsfire-autodownload.js text/javascript
                 pending = null;
             }
         };
-        console.log('[MF Auto] v1.1 Enabled');
+        console.log('[MF Auto] v1.2 Enabled');
         schedule();
     }
     if (document.readyState === 'loading') {
